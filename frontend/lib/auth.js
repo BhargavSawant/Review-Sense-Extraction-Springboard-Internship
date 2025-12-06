@@ -23,17 +23,6 @@ export const authOptions = {
           throw new Error("Invalid credentials");
         }
 
-        // Hardcoded admin check (for dev/testing; remove in production)
-        if (credentials.email === "admin@sentimentplus.com" && credentials.password === "admin@123") {
-          return {
-            id: "admin-1",
-            email: "admin@sentimentplus.com",
-            name: "System Admin",
-            image: null,
-            role: "admin" // Optional: for future role-based access
-          };
-        }
-
         const client = await clientPromise;
         const db = client.db("sentiment_app");
         
@@ -58,8 +47,7 @@ export const authOptions = {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
-          image: user.image,
-          role: user.role || "user" // Optional: default to user if no role
+          image: user.image
         };
       }
     })
@@ -74,14 +62,12 @@ export const authOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role; // Add role to JWT
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id;
-        session.user.role = token.role; // Add role to session
       }
       return session;
     }

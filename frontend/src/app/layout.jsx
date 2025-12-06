@@ -5,7 +5,7 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Sentiment Analysis App",
+  title: "Sentiment +",
   description: "Analyze text sentiment with AI",
 };
 

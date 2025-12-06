@@ -1,0 +1,413 @@
+# backend/hybrid_absa.py
+# Hybrid ABSA System: KeyBERT + YAKE + SpaCy
+# NO TRAINING REQUIRED - Works out of the box!
+
+from keybert import KeyBERT
+import yake
+import spacy
+from collections import Counter
+from transformers import pipeline
+
+class HybridABSA:
+    """
+    State-of-the-art aspect extraction using KeyBERT + YAKE + SpaCy
+    Automatically extracts 20+ aspects from any domain
+    """
+    
+    def __init__(self, sentiment_model_path="./my_finetuned_sentiment_model"):
+        print("🔄 Initializing Hybrid ABSA System...")
+        
+        # KeyBERT for semantic keyword extraction
+        print("  Loading KeyBERT...")
+        self.keybert = KeyBERT()
+        
+        # YAKE for statistical keyword extraction
+        print("  Loading YAKE...")
+        self.yake_extractor = yake.KeywordExtractor(
+            lan="en",
+            n=3,  # Max 3-word phrases
+            dedupLim=0.9,
+            top=20,
+            features=None
+        )
+        
+        # SpaCy for NLP refinement
+        print("  Loading SpaCy...")
+        try:
+            self.nlp = spacy.load("en_core_web_sm")
+        except:
+            print("⚠️  SpaCy model not found. Installing...")
+            import os
+            os.system("python -m spacy download en_core_web_sm")
+            self.nlp = spacy.load("en_core_web_sm")
+        
+        # Your fine-tuned sentiment model
+        print("  Loading sentiment model...")
+        self.sentiment_model = pipeline(
+            "sentiment-analysis",
+            model=sentiment_model_path
+        )
+        
+        print("✅ Hybrid ABSA System ready!\n")
+    
+    def extract_aspects(self, text, top_n=20):
+        """
+        Extract aspects using hybrid approach
+        Returns: List of aspect keywords
+        """
+        # Method 1: KeyBERT (semantic)
+        keybert_keywords = []
+        try:
+            kb_results = self.keybert.extract_keywords(
+                text,
+                keyphrase_ngram_range=(1, 3),
+                stop_words='english',
+                top_n=15,
+                diversity=0.7
+            )
+            keybert_keywords = [(kw[0], kw[1] * 1.2) for kw in kb_results]  # Boost KeyBERT
+        except Exception as e:
+            print(f"KeyBERT error: {e}")
+        
+        # Method 2: YAKE (statistical)
+        yake_keywords = []
+        try:
+            yake_results = self.yake_extractor.extract_keywords(text)
+            yake_keywords = [(kw[0], 1 - kw[1]) for kw in yake_results[:15]]  # Invert score
+        except Exception as e:
+            print(f"YAKE error: {e}")
+        
+        # Method 3: SpaCy (noun phrases)
+        spacy_nouns = set()
+        try:
+            doc = self.nlp(text.lower())
+            for chunk in doc.noun_chunks:
+                if len(chunk.root.text) > 2:
+                    spacy_nouns.add(chunk.root.text)
+        except Exception as e:
+            print(f"SpaCy error: {e}")
+        
+        # Combine and score
+        combined = {}
+        
+        # Add KeyBERT results
+        for keyword, score in keybert_keywords:
+            combined[keyword] = {
+                "keyword": keyword,
+                "scores": [score],
+                "methods": ["keybert"]
+            }
+        
+        # Add YAKE results
+        for keyword, score in yake_keywords:
+            if keyword in combined:
+                combined[keyword]["scores"].append(score)
+                combined[keyword]["methods"].append("yake")
+            else:
+                combined[keyword] = {
+                    "keyword": keyword,
+                    "scores": [score],
+                    "methods": ["yake"]
+                }
+        
+        # Boost if it's a noun from SpaCy
+        for keyword in combined:
+            words = keyword.lower().split()
+            if any(word in spacy_nouns for word in words):
+                combined[keyword]["scores"].append(0.3)  # Noun boost
+                if "spacy" not in combined[keyword]["methods"]:
+                    combined[keyword]["methods"].append("spacy")
+        
+        # Calculate final scores
+        results = []
+        for data in combined.values():
+            avg_score = sum(data["scores"]) / len(data["scores"])
+            results.append({
+                "keyword": data["keyword"],
+                "score": round(avg_score, 3),
+                "methods": data["methods"]
+            })
+        
+        # Sort by score and return top N
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return results[:top_n]
+    
+    def analyze_aspect_sentiment(self, text, aspect):
+        """
+        Analyze sentiment for a specific aspect
+        """
+        # Find context containing the aspect
+        text_lower = text.lower()
+        aspect_lower = aspect.lower()
+        
+        # Find sentence containing aspect
+        sentences = text.replace('!', '.').replace('?', '.').split('.')
+        context = ""
+        
+        for sentence in sentences:
+            if aspect_lower in sentence.lower():
+                context = sentence.strip()
+                break
+        
+        if not context or len(context) < 5:
+            # Use entire text as fallback
+            context = text
+        
+        # Analyze sentiment
+        try:
+            result = self.sentiment_model(context)[0]
+            label_map = {
+                'LABEL_0': 'negative',
+                'LABEL_1': 'neutral',
+                'LABEL_2': 'positive'
+            }
+            return {
+                "sentiment": label_map.get(result['label'], 'neutral'),
+                "confidence": round(result['score'], 3),
+                "text_span": context[:150]  # Limit length
+            }
+        except Exception as e:
+            print(f"Sentiment analysis error: {e}")
+            return None
+    
+    def analyze_single_review(self, text, top_n=20):
+        """
+        Analyze single review: overall sentiment + aspects
+        """
+        # Overall sentiment
+        try:
+            overall_result = self.sentiment_model(text)[0]
+            label_map = {
+                'LABEL_0': 'negative',
+                'LABEL_1': 'neutral',
+                'LABEL_2': 'positive'
+            }
+            overall_sentiment = label_map.get(overall_result['label'], 'neutral')
+            overall_confidence = round(overall_result['score'], 3)
+        except Exception as e:
+            print(f"Overall sentiment error: {e}")
+            overall_sentiment = 'neutral'
+            overall_confidence = 0.5
+        
+        # Extract aspects
+        aspects = self.extract_aspects(text, top_n=top_n)
+        
+        # Analyze sentiment for each aspect
+        aspects_with_sentiment = []
+        for aspect_data in aspects:
+            sentiment_result = self.analyze_aspect_sentiment(text, aspect_data["keyword"])
+            
+            if sentiment_result:
+                aspects_with_sentiment.append({
+                    "aspect": aspect_data["keyword"],
+                    "sentiment": sentiment_result["sentiment"],
+                    "confidence": sentiment_result["confidence"],
+                    "text_span": sentiment_result["text_span"],
+                    "relevance_score": aspect_data["score"],
+                    "methods": aspect_data["methods"]
+                })
+        
+        return {
+            "overall_sentiment": overall_sentiment,
+            "overall_confidence": overall_confidence,
+            "aspects": aspects_with_sentiment,
+            "total_aspects_found": len(aspects_with_sentiment)
+        }
+    
+    def analyze_bulk_reviews(self, reviews, product_name, top_n=20):
+        """
+        Analyze multiple reviews and aggregate results
+        """
+        print(f"\n Analyzing {len(reviews)} reviews for '{product_name}'...")
+        
+        # Analyze each review
+        all_results = []
+        aspect_aggregation = {}
+        
+        for i, review_text in enumerate(reviews):
+            if i % 50 == 0 and i > 0:
+                print(f"  Progress: {i}/{len(reviews)}")
+            
+            if len(review_text.strip()) == 0:
+                continue
+            
+            # Analyze this review
+            result = self.analyze_single_review(review_text, top_n=10)
+            
+            all_results.append({
+                "text": review_text,
+                "overall_sentiment": result["overall_sentiment"],
+                "overall_confidence": result["overall_confidence"],
+                "aspects": result["aspects"]
+            })
+            
+            # Aggregate aspects
+            for aspect_data in result["aspects"]:
+                aspect = aspect_data["aspect"]
+                
+                if aspect not in aspect_aggregation:
+                    aspect_aggregation[aspect] = {
+                        "sentiments": [],
+                        "confidences": [],
+                        "relevance_scores": [],
+                        "mentions": 0,
+                        "sample_texts": []
+                    }
+                
+                aspect_aggregation[aspect]["sentiments"].append(aspect_data["sentiment"])
+                aspect_aggregation[aspect]["confidences"].append(aspect_data["confidence"])
+                aspect_aggregation[aspect]["relevance_scores"].append(aspect_data["relevance_score"])
+                aspect_aggregation[aspect]["mentions"] += 1
+                
+                if len(aspect_aggregation[aspect]["sample_texts"]) < 5:
+                    aspect_aggregation[aspect]["sample_texts"].append(aspect_data["text_span"])
+        
+        print(f"✅ Analysis complete!")
+        
+        # Format aspect summary (only aspects mentioned in 3%+ of reviews)
+        aspects_summary = {}
+        min_mentions = max(1, int(len(reviews) * 0.03))
+        
+        for aspect, data in aspect_aggregation.items():
+            if data["mentions"] >= min_mentions:
+                sentiment_counts = Counter(data["sentiments"])
+                total = sum(sentiment_counts.values())
+                
+                aspects_summary[aspect] = {
+                    "sentiment_distribution": {
+                        "positive": sentiment_counts.get("positive", 0),
+                        "neutral": sentiment_counts.get("neutral", 0),
+                        "negative": sentiment_counts.get("negative", 0)
+                    },
+                    "percentages": {
+                        "positive": round((sentiment_counts.get("positive", 0) / total) * 100, 1),
+                        "neutral": round((sentiment_counts.get("neutral", 0) / total) * 100, 1),
+                        "negative": round((sentiment_counts.get("negative", 0) / total) * 100, 1)
+                    },
+                    "avg_confidence": round(sum(data["confidences"]) / len(data["confidences"]), 2),
+                    "avg_relevance": round(sum(data["relevance_scores"]) / len(data["relevance_scores"]), 2),
+                    "mentions": data["mentions"],
+                    "percentage_mentioned": round((data["mentions"] / len(reviews)) * 100, 1),
+                    "sample_reviews": data["sample_texts"][:3]
+                }
+        
+        # Calculate overall sentiment
+        overall_sentiments = [r["overall_sentiment"] for r in all_results]
+        sentiment_counts = Counter(overall_sentiments)
+        
+        # Generate insights
+        insights = self._generate_insights(aspects_summary, sentiment_counts, len(reviews))
+        
+        print(f" Found {len(aspects_summary)} significant aspects\n")
+        
+        return {
+            "product_name": product_name,
+            "total_reviews": len(all_results),
+            "aspects_found": len(aspects_summary),
+            "overall_sentiment": {
+                "positive": sentiment_counts.get("positive", 0),
+                "neutral": sentiment_counts.get("neutral", 0),
+                "negative": sentiment_counts.get("negative", 0)
+            },
+            "overall_percentage": {
+                "positive": round((sentiment_counts.get("positive", 0) / len(reviews)) * 100, 1),
+                "neutral": round((sentiment_counts.get("neutral", 0) / len(reviews)) * 100, 1),
+                "negative": round((sentiment_counts.get("negative", 0) / len(reviews)) * 100, 1)
+            },
+            "aspects": aspects_summary,
+            "key_insights": insights
+        }
+    
+    def _generate_insights(self, aspects_summary, sentiment_counts, total_reviews):
+        """Generate insights from analysis"""
+        insights = []
+        
+        if not aspects_summary:
+            insights.append(f"Analyzed {total_reviews} reviews. No prominent aspects detected.")
+            return insights
+        
+        # Most mentioned aspect
+        most_mentioned = max(aspects_summary.items(), key=lambda x: x[1]["mentions"])
+        insights.append(
+            f"Most discussed: {most_mentioned[0].title()} "
+            f"(mentioned in {most_mentioned[1]['percentage_mentioned']}% of reviews)"
+        )
+        
+        # Best aspect
+        positive_aspects = [
+            (k, v) for k, v in aspects_summary.items() 
+            if v["percentages"]["positive"] > 65 and v["mentions"] >= total_reviews * 0.05
+        ]
+        if positive_aspects:
+            best = max(positive_aspects, key=lambda x: x[1]["percentages"]["positive"])
+            insights.append(
+                f"Most praised: {best[0].title()} "
+                f"({int(best[1]['percentages']['positive'])}% positive)"
+            )
+        
+        # Worst aspect
+        negative_aspects = [
+            (k, v) for k, v in aspects_summary.items() 
+            if v["percentages"]["negative"] > 40 and v["mentions"] >= total_reviews * 0.05
+        ]
+        if negative_aspects:
+            worst = max(negative_aspects, key=lambda x: x[1]["percentages"]["negative"])
+            insights.append(
+                f"Needs improvement: {worst[0].title()} "
+                f"({int(worst[1]['percentages']['negative'])}% negative)"
+            )
+        
+        # Overall sentiment
+        positive_pct = (sentiment_counts.get("positive", 0) / total_reviews) * 100
+        if positive_pct > 70:
+            insights.append(f"Overall: Highly recommended ({int(positive_pct)}% positive reviews)")
+        elif positive_pct < 40:
+            insights.append(f"Overall: Significant concerns ({int(positive_pct)}% positive reviews)")
+        else:
+            insights.append(f"Overall: Mixed feedback ({int(positive_pct)}% positive reviews)")
+        
+        insights.append(f"Detected {len(aspects_summary)} key aspects using hybrid AI extraction")
+        
+        return insights
+
+
+# Test function
+if __name__ == "__main__":
+    print("\n" + "="*60)
+    print("TESTING HYBRID ABSA SYSTEM")
+    print("="*60)
+    
+    analyzer = HybridABSA()
+    
+    # Test single review
+    test_text = """
+    The food was absolutely delicious and beautifully presented. 
+    Service was friendly but quite slow. The atmosphere was cozy. 
+    Price is reasonable for the quality you get.
+    """
+    
+    print("\n📝 TEST REVIEW:")
+    print(test_text.strip())
+    print("\n" + "-"*60)
+    
+    result = analyzer.analyze_single_review(test_text, top_n=20)
+    
+    print(f"\n🎯 OVERALL: {result['overall_sentiment'].upper()} "
+          f"(confidence: {result['overall_confidence']})")
+    print(f"\n  FOUND {result['total_aspects_found']} ASPECTS:\n")
+    
+    for i, aspect in enumerate(result["aspects"], 1):
+        sentiment_emoji = {
+            "positive": "😊",
+            "negative": "😞",
+            "neutral": "😐"
+        }.get(aspect["sentiment"], "😐")
+        
+        print(f"{i}. {aspect['aspect'].upper()}")
+        print(f"   {sentiment_emoji} {aspect['sentiment'].title()} "
+              f"(confidence: {aspect['confidence']}, relevance: {aspect['relevance_score']})")
+        print(f"   💬 \"{aspect['text_span'][:80]}...\"")
+        print(f"   🔍 Methods: {', '.join(aspect['methods'])}")
+        print()
+    
+    print("="*60)
