@@ -178,18 +178,18 @@ The Sentiment+ backend exposes RESTful endpoints via FastAPI.
    pip install -r requirements.txt
    ```
 
----
-
 ### Frontend Setup
 
 1. Navigate to the frontend directory:
    ```bash
    cd frontend
    ```
+   
 2. Install dependencies:
    ```bash
    npm install next next-auth lucide-react chart.js react-chartjs-2 recharts
    ```
+   
 3. Configure the .env.local file with:
    MONGODB_URI
    NEXTAUTH_SECRET
