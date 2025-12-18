@@ -186,6 +186,34 @@ The Sentiment+ backend exposes RESTful endpoints via FastAPI.
    ```bash
    cd frontend
    ```
-3. Install dependencies:
-4. Configure the .env.local file with:
-   
+2. Install dependencies:
+   ```bash
+   npm install next next-auth lucide-react chart.js react-chartjs-2 recharts
+   ```
+3. Configure the .env.local file with:
+   MONGODB_URI
+   NEXTAUTH_SECRET
+   GOOGLE_CLIENT_ID
+   GOOGLE_CLIENT_SECRET
+
+---
+
+### Usage
+1. Start the Backend API
+   ```bash
+   uvicorn sentiment_api:app --reload --port 8000
+   ```
+2. Start the Frontend Application
+   ```bash
+   npm run dev
+   ```
+3. Access the Application
+   ```bash
+   http://localhost:3000
+   ```
+
+---
+
+### License
+
+Distributed under the MIT License.
