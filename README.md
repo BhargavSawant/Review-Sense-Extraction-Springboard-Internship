@@ -8,11 +8,11 @@ Sentiment+ is a robust full-stack application designed to transform unstructured
 
 - [Features](#features)
 - [Technologies Used](#technologies-used)
-- [Architecture](#architecture)
 - [API Documentation](#api-documentation)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Architecture](#architecture)
 - [License](#license)
 
 ---
