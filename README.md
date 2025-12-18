@@ -203,10 +203,12 @@ The Sentiment+ backend exposes RESTful endpoints via FastAPI.
    ```bash
    uvicorn sentiment_api:app --reload --port 8000
    ```
+   
 2. Start the Frontend Application
    ```bash
    npm run dev
    ```
+   
 3. Access the Application
    ```bash
    http://localhost:3000
