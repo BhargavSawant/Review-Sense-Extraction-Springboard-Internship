@@ -7,8 +7,8 @@ Sentiment+ is a robust full-stack application designed to transform unstructured
 ## Table of Contents
 
 - [Features](#features)
-- [Technologies Used](#technologies-used)
 - [Architecture](#architecture)
+- [Technologies Used](#technologies-used)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -39,6 +39,24 @@ Sentiment+ is a robust full-stack application designed to transform unstructured
 
 - **System Monitoring & Analytics**  
   Tracks API health, CPU and memory usage, database latency, and request traffic.
+
+---
+
+## Architecture
+
+The application follows a decoupled, scalable architecture:
+
+- **Frontend (Next.js)**  
+  Handles UI rendering, authentication, dashboards, and active learning workflows.
+
+- **Backend (FastAPI)**  
+  Performs sentiment analysis, aspect extraction, feedback handling, and analytics.
+
+- **Authentication Layer**  
+  NextAuth manages user sessions and role-based access control.
+
+- **Database Layer**  
+  A shared MongoDB instance stores reviews, corrections, users, and metrics.
 
 ---
 
@@ -127,24 +145,6 @@ Sentiment+ is a robust full-stack application designed to transform unstructured
    ```bash
    http://localhost:3000
    ```
-
----
-
-## Architecture
-
-The application follows a decoupled, scalable architecture:
-
-- **Frontend (Next.js)**  
-  Handles UI rendering, authentication, dashboards, and active learning workflows.
-
-- **Backend (FastAPI)**  
-  Performs sentiment analysis, aspect extraction, feedback handling, and analytics.
-
-- **Authentication Layer**  
-  NextAuth manages user sessions and role-based access control.
-
-- **Database Layer**  
-  A shared MongoDB instance stores reviews, corrections, users, and metrics.
 
 ---
 
