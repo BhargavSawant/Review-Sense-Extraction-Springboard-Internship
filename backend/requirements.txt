@@ -1,23 +1,28 @@
-# Backend Requirements - Updated with Hybrid ABSA
+# Backend Requirements - Updated with All Dependencies
 
-# Core dependencies (existing)
+# Core dependencies
 fastapi
 uvicorn[standard]
+pydantic
+python-dotenv
+
+# Transformers (NLP + Sentiment)
 transformers
 torch
-pymongo
-python-dotenv
-pydantic
 
-# For bulk file uploads (existing)
+# Database
+pymongo
+dnspython
+
+# File handling
+python-multipart
 pandas
 openpyxl
-python-multipart
 
 # NEW: Hybrid ABSA System
 keybert
 yake
 spacy
 
-# Note: After installing, run:
-# python -m spacy download en_core_web_sm
+# System monitoring
+psutil

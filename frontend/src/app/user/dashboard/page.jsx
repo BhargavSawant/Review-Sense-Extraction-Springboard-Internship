@@ -1,3 +1,4 @@
+//frontend\src\app\user\dashboard\page.jsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -50,6 +51,7 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [trendData, setTrendData] = useState(null);
   const [aspects, setAspects] = useState([]);
+  const [emotions, setEmotions] = useState([]);
 
   // Detect system theme
   useEffect(() => {
@@ -100,22 +102,33 @@ export default function UserDashboard() {
       const aspectsData = await aspectsRes.json();
       setAspects(aspectsData.aspects || []);
 
-      // Generate trend data (last 7 days)
-      generateTrendData(statsData);
+      // Fetch real sentiment trend data
+      const trendRes = await fetch(
+        `http://localhost:8000/sentiment-trend?user_email=${session.user.email}&days=7`
+      );
+      const trendDataRes = await trendRes.json();
+      if (trendDataRes.success) {
+        setTrendData({
+          days: trendDataRes.days,
+          positive: trendDataRes.positive,
+          neutral: trendDataRes.neutral,
+          negative: trendDataRes.negative
+        });
+      }
+
+      // Fetch real emotion distribution data
+      const emotionRes = await fetch(
+        `http://localhost:8000/emotion-distribution?user_email=${session.user.email}`
+      );
+      const emotionDataRes = await emotionRes.json();
+      if (emotionDataRes.success) {
+        setEmotions(emotionDataRes.emotions);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateTrendData = (statsData) => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const positive = [65, 59, 80, 81, 56, 95, 88];
-    const neutral = [15, 16, 10, 11, 14, 2, 4];
-    const negative = [20, 25, 10, 8, 30, 3, 8];
-
-    setTrendData({ days, positive, neutral, negative });
   };
 
   const getSentimentColor = (sentiment) => {
@@ -128,14 +141,6 @@ export default function UserDashboard() {
   };
 
   const npsScore = 62;
-
-  const emotions = [
-    { name: 'Joy', value: 450, color: '#4CD4A5' },
-    { name: 'Trust', value: 300, color: '#4A7DFF' },
-    { name: 'Anger', value: 120, color: '#E95252' },
-    { name: 'Anticipation', value: 200, color: '#FF7661' },
-    { name: 'Sadness', value: 80, color: '#9CA3AF' }
-  ];
 
   // Chart configurations
   const trendChartData = trendData ? {
@@ -171,13 +176,13 @@ export default function UserDashboard() {
   const ratioChartData = {
     labels: ['Positive', 'Neutral', 'Negative'],
     datasets: [{
-      data: [stats.positive || 68, stats.neutral || 18, stats.negative || 14],
+      data: [stats.positive || 0, stats.neutral || 0, stats.negative || 0],
       backgroundColor: ['#4CD4A5', '#FCD34D', '#E95252'],
       borderWidth: 0
     }]
   };
 
-  const emotionChartData = {
+  const emotionChartData = emotions.length > 0 ? {
     labels: emotions.map(e => e.name),
     datasets: [{
       data: emotions.map(e => e.value),
@@ -185,7 +190,7 @@ export default function UserDashboard() {
       borderRadius: 4,
       barThickness: 20
     }]
-  };
+  } : null;
 
   const chartOptions = {
     responsive: true,
@@ -329,9 +334,15 @@ export default function UserDashboard() {
               <h3 className="text-lg font-bold mb-6 text-gray-900 dark:text-white">
                 Emotional Distribution
               </h3>
-              <div className="h-[280px]">
-                <Bar data={emotionChartData} options={barOptions} />
-              </div>
+              {emotionChartData ? (
+                <div className="h-[280px]">
+                  <Bar data={emotionChartData} options={barOptions} />
+                </div>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-gray-500 dark:text-slate-500">
+                  No emotion data available yet
+                </div>
+              )}
             </div>
           </div>
 
@@ -344,9 +355,15 @@ export default function UserDashboard() {
                   Sentiment Trend (7 Days)
                 </h3>
               </div>
-              <div className="h-64">
-                {trendChartData && <Line data={trendChartData} options={chartOptions} />}
-              </div>
+              {trendChartData ? (
+                <div className="h-64">
+                  <Line data={trendChartData} options={chartOptions} />
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-gray-500 dark:text-slate-500">
+                  No trend data available yet
+                </div>
+              )}
             </div>
 
             {/* Sentiment Ratio */}
@@ -354,29 +371,37 @@ export default function UserDashboard() {
               <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">
                 Sentiment Ratio
               </h3>
-              <div className="h-40 relative flex items-center justify-center">
-                <Doughnut data={ratioChartData} options={doughnutOptions} />
-                <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                  <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {Math.round((stats.positive / stats.total) * 100 || 68)}%
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-slate-500">Positive</span>
+              {stats.total > 0 ? (
+                <>
+                  <div className="h-40 relative flex items-center justify-center">
+                    <Doughnut data={ratioChartData} options={doughnutOptions} />
+                    <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {Math.round((stats.positive / stats.total) * 100)}%
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-slate-500">Positive</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-xs mt-4 px-2">
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span className="text-gray-600 dark:text-slate-400">Pos: {stats.positive}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                      <span className="text-gray-600 dark:text-slate-400">Neu: {stats.neutral}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      <span className="text-gray-600 dark:text-slate-400">Neg: {stats.negative}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="h-40 flex items-center justify-center text-gray-500 dark:text-slate-500">
+                  No reviews yet
                 </div>
-              </div>
-              <div className="flex justify-between text-xs mt-4 px-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span className="text-gray-600 dark:text-slate-400">Pos</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                  <span className="text-gray-600 dark:text-slate-400">Neu</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  <span className="text-gray-600 dark:text-slate-400">Neg</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 

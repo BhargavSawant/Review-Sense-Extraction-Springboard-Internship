@@ -1,50 +1,49 @@
-import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
-import bcrypt from "bcryptjs";
+// app/api/register/route.js
+import { MongoClient } from 'mongodb';
+import bcrypt from 'bcryptjs';
 
 export async function POST(req) {
   try {
     const { name, email, password } = await req.json();
-
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    const client = await clientPromise;
-    const db = client.db("sentiment_app");
-
-    const existingUser = await db.collection("users").findOne({ email });
-
+    
+    // Connect to MongoDB
+    const client = await MongoClient.connect(process.env.MONGODB_URI);
+    const db = client.db("sentiment_db");
+    
+    // FIXED: Use "user-management" collection
+    const usersCollection = db.collection("user-management");
+    
+    // Check if user exists
+    const existingUser = await usersCollection.findOne({ email });
     if (existingUser) {
-      return NextResponse.json(
-        { error: "User already exists" },
-        { status: 400 }
-      );
+      await client.close();
+      return Response.json({ error: "User already exists" }, { status: 400 });
     }
-
+    
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    const result = await db.collection("users").insertOne({
+    
+    // Create user document
+    const newUser = {
       name,
       email,
       password: hashedPassword,
-      image: null,
-      emailVerified: null,
-      createdAt: new Date(),
-    });
-
-    return NextResponse.json(
-      { message: "User created successfully", userId: result.insertedId },
-      { status: 201 }
-    );
+      role: "user",
+      status: "active",
+      created_at: new Date(),
+      last_login: null,
+      review_count: 0,
+      correction_count: 0
+    };
+    
+    // Save to MongoDB
+    await usersCollection.insertOne(newUser);
+    
+    await client.close();
+    
+    return Response.json({ success: true, message: "User created successfully" });
   } catch (error) {
     console.error("Registration error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return Response.json({ error: error.message }, { status: 500 });
   }
 }

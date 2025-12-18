@@ -26,6 +26,7 @@ export default function UserSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
   const profileMenuRef = useRef(null);
 
   const isActive = (path) => pathname === path;
@@ -73,6 +74,51 @@ export default function UserSidebar() {
   const handleLearnMore = () => {
     window.open("https://docs.sentimentplus.com", "_blank");
   };
+
+  const getInitials = () => {
+    if (session?.user?.name) {
+      return session.user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return session?.user?.email?.[0]?.toUpperCase() || "U";
+  };
+
+  // Load profile image from backend
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch(`http://localhost:8000/user/profile-image/${session.user.email}`);
+          const data = await response.json();
+          
+          if (data.success && data.profile_image) {
+            setProfileImage(data.profile_image);
+          }
+        } catch (error) {
+          console.error("Error fetching profile image:", error);
+        }
+      }
+    };
+
+    fetchProfileImage();
+  }, [session]);
+
+  // Listen for profile image updates
+  useEffect(() => {
+    const handleProfileImageUpdate = (event) => {
+      setProfileImage(event.detail.image);
+    };
+
+    window.addEventListener('profileImageUpdated', handleProfileImageUpdate);
+
+    return () => {
+      window.removeEventListener('profileImageUpdated', handleProfileImageUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -175,15 +221,16 @@ export default function UserSidebar() {
               onClick={toggleProfileMenu}
               className="w-full p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 hover:from-blue-100 hover:to-cyan-100 dark:hover:from-blue-900/30 dark:hover:to-cyan-900/30 transition-all flex items-center gap-3 overflow-hidden border border-blue-100 dark:border-blue-800 cursor-pointer group"
             >
-              <div className="min-w-[2rem] w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-xs font-bold text-white">
-                {session.user.name
-                  ? session.user.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()
-                      .slice(0, 2)
-                  : session.user.email?.[0].toUpperCase()}
+              <div className="min-w-[2rem] w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-xs font-bold text-white overflow-hidden">
+                {profileImage ? (
+                  <img
+                    src={profileImage}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  getInitials()
+                )}
               </div>
               <div className="flex-1 overflow-hidden whitespace-nowrap text-left">
                 <p className="text-sm font-bold truncate text-gray-800 dark:text-white">

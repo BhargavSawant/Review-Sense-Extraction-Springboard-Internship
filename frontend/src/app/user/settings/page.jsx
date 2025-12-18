@@ -20,16 +20,20 @@ import {
   Sun,
   Upload,
   Check,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 
 export default function UserSettingsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("personal");
   const [showPassword, setShowPassword] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [profileImage, setProfileImage] = useState(session?.user?.image || null);
+  const [profileImage, setProfileImage] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
   const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
@@ -52,6 +56,26 @@ export default function UserSettingsPage() {
       router.push("/login");
     }
   }, [status, router]);
+
+  // Load user profile image from backend
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch(`http://localhost:8000/user/profile-image/${session.user.email}`);
+          const data = await response.json();
+          
+          if (data.success && data.profile_image) {
+            setProfileImage(data.profile_image);
+          }
+        } catch (error) {
+          console.error("Error fetching profile image:", error);
+        }
+      }
+    };
+
+    fetchProfileImage();
+  }, [session]);
 
   // Load dark mode preference
   useEffect(() => {
@@ -103,21 +127,118 @@ export default function UserSettingsPage() {
     setShowPassword(!showPassword);
   };
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5000000) { // 5MB limit
-        alert("File size must be less than 5MB");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result);
-        setShowUploadModal(false);
-        // In real app: upload to server
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (file.size > 5000000) { // 5MB limit
+      alert("File size must be less than 5MB");
+      return;
     }
+
+    if (!file.type.startsWith('image/')) {
+      alert("Please upload an image file");
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Upload to backend
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('user_email', session.user.email);
+
+      const response = await fetch('http://localhost:8000/user/upload-profile-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setProfileImage(data.image_url);
+        setShowUploadModal(false);
+        
+        // Update session to reflect the change
+        await update({
+          ...session,
+          user: {
+            ...session.user,
+            image: data.image_url
+          }
+        });
+
+        // Trigger sidebar update
+        window.dispatchEvent(new CustomEvent('profileImageUpdated', { 
+          detail: { image: data.image_url } 
+        }));
+
+        alert("Profile image updated successfully!");
+      } else {
+        alert("Error uploading image: " + data.message);
+      }
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Error uploading image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (!confirm("Are you sure you want to remove your profile image?")) {
+      return;
+    }
+
+    setIsRemoving(true);
+
+    try {
+      const response = await fetch(`http://localhost:8000/user/remove-profile-image?user_email=${session.user.email}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setProfileImage(null);
+        
+        // Update session
+        await update({
+          ...session,
+          user: {
+            ...session.user,
+            image: null
+          }
+        });
+
+        // Trigger sidebar update
+        window.dispatchEvent(new CustomEvent('profileImageUpdated', { 
+          detail: { image: null } 
+        }));
+
+        alert("Profile image removed successfully!");
+      } else {
+        alert("Error removing image: " + data.message);
+      }
+    } catch (error) {
+      console.error("Error removing image:", error);
+      alert("Error removing image. Please try again.");
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
+  const getInitials = () => {
+    if (formData.name) {
+      return formData.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return formData.email?.[0]?.toUpperCase() || "U";
   };
 
   const validateForm = () => {
@@ -146,10 +267,6 @@ export default function UserSettingsPage() {
 
   const handleCancel = () => {
     router.back();
-  };
-
-  const handleLogout = () => {
-    signOut({ callbackUrl: "/login" });
   };
 
   if (status === "loading") {
@@ -197,7 +314,7 @@ export default function UserSettingsPage() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
-                      {formData.name?.charAt(0)?.toUpperCase() || "U"}
+                      {getInitials()}
                     </div>
                   )}
                 </div>
@@ -230,6 +347,27 @@ export default function UserSettingsPage() {
                   Verified
                 </span>
               </div>
+
+              {/* Remove Image Button */}
+              {profileImage && (
+                <button
+                  onClick={handleRemoveImage}
+                  disabled={isRemoving}
+                  className="w-full mt-4 px-4 py-2 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isRemoving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Removing...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Remove Image
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -427,31 +565,43 @@ export default function UserSettingsPage() {
               <h3 className="text-lg font-bold text-[#2C2C2C] dark:text-white">Upload Profile Picture</h3>
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                disabled={isUploading}
+                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
               >
                 <X className="w-5 h-5 text-[#6E6E6E] dark:text-slate-400" />
               </button>
             </div>
             
             <div className="border-2 border-dashed border-[#E6E2DD] dark:border-slate-600 rounded-xl p-8 text-center">
-              <Upload className="w-12 h-12 mx-auto mb-3 text-[#4A7DFF]" />
-              <p className="text-sm text-[#6E6E6E] dark:text-slate-300 mb-4">
-                Click to upload or drag and drop<br />
-                <span className="text-xs">PNG, JPG up to 5MB</span>
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-[#4A7DFF] text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-              >
-                Choose File
-              </button>
+              {isUploading ? (
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-12 h-12 text-[#4A7DFF] animate-spin" />
+                  <p className="text-sm text-[#6E6E6E] dark:text-slate-300 font-medium">
+                    Uploading...
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-12 h-12 mx-auto mb-3 text-[#4A7DFF]" />
+                  <p className="text-sm text-[#6E6E6E] dark:text-slate-300 mb-4">
+                    Click to upload or drag and drop<br />
+                    <span className="text-xs">PNG, JPG up to 5MB</span>
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 bg-[#4A7DFF] text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                  >
+                    Choose File
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

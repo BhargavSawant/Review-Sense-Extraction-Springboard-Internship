@@ -38,7 +38,7 @@ export default function AdminSidebar() {
     },
     {
       name: "User Management",
-      path: "/admin/users",
+      path: "/admin/user-management",
       icon: Users,
     },
     {

@@ -1,17 +1,11 @@
-//sentiment-app\frontend\src\lib\auth.js
+// frontend/src/lib/auth.js
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import clientPromise from "./mongodb";
-import bcrypt from "bcryptjs";
+import { MongoClient } from 'mongodb';
+import bcrypt from 'bcryptjs';
 
 export const authOptions = {
-  adapter: MongoDBAdapter(clientPromise),
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -19,58 +13,100 @@ export const authOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
-        }
-
-        const client = await clientPromise;
-        const db = client.db("sentiment_app");
+        const client = await MongoClient.connect(process.env.MONGODB_URI);
+        const db = client.db("sentiment_db");
         
-        const user = await db.collection("users").findOne({
-          email: credentials.email
+        const user = await db.collection("users").findOne({ 
+          email: credentials.email 
         });
-
-        if (!user || !user.password) {
-          throw new Error("Invalid credentials");
+        
+        if (!user) {
+          client.close();
+          throw new Error("No user found");
         }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
+        
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        
+        if (!isValid) {
+          client.close();
+          throw new Error("Invalid password");
+        }
+        
+        // Update last_login
+        await db.collection("users").updateOne(
+          { email: user.email },
+          { $set: { last_login: new Date() } }
         );
-
-        if (!isPasswordValid) {
-          throw new Error("Invalid credentials");
-        }
-
+        
+        client.close();
+        
         return {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
-          image: user.image
+          role: user.role
         };
       }
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     })
   ],
-  session: {
-    strategy: "jwt"
-  },
-  pages: {
-    signIn: "/login",
-  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.role = user.role;
         token.id = user.id;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (session?.user) {
+        session.user.role = token.role;
         session.user.id = token.id;
       }
       return session;
+    },
+    async signIn({ user, account, profile }) {
+      if (account.provider === "google") {
+        // Handle Google sign-in - save to MongoDB if new user
+        const client = await MongoClient.connect(process.env.MONGODB_URI);
+        const db = client.db("sentiment_db");
+        
+        const existingUser = await db.collection("users").findOne({ 
+          email: user.email 
+        });
+        
+        if (!existingUser) {
+          await db.collection("users").insertOne({
+            name: user.name,
+            email: user.email,
+            role: "user",
+            status: "active",
+            created_at: new Date(),
+            last_login: new Date(),
+            review_count: 0,
+            correction_count: 0,
+            provider: "google"
+          });
+        } else {
+          await db.collection("users").updateOne(
+            { email: user.email },
+            { $set: { last_login: new Date() } }
+          );
+        }
+        
+        client.close();
+      }
+      return true;
     }
+  },
+  pages: {
+    signIn: '/login',
+  },
+  session: {
+    strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

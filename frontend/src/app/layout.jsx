@@ -1,18 +1,15 @@
-import { Inter } from "next/font/google";
-import "./globals.css";
 import { Providers } from "./providers";
-
-const inter = Inter({ subsets: ["latin"] });
+import "./globals.css";
 
 export const metadata = {
-  title: "Sentiment +",
-  description: "Analyze text sentiment with AI",
+  title: "Sentiment Plus",
+  description: "AI-Powered Sentiment Analysis",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <Providers>{children}</Providers>
       </body>
     </html>
