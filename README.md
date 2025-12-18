@@ -148,74 +148,14 @@ The application follows a decoupled, scalable architecture:
 
 ---
 
-## API Documentation
-
-The Sentiment+ backend exposes RESTful endpoints via FastAPI.
-
-### Core Analysis Endpoints
-
-- **Analyze Single Review**  
-  `POST /analyze-single`  
-  Performs full ABSA on a single review and extracts aspect-level sentiments.
-
-- **Bulk Upload Reviews**  
-  `POST /upload-reviews`  
-  Accepts CSV or Excel files for large-scale sentiment analysis.
-
-- **Legacy Prediction**  
-  `POST /predict`  
-  Performs basic sentiment classification without aspect extraction.
-
----
-
-### Active Learning & Feedback
-
-- **Submit Correction**  
-  `POST /corrections`  
-  Allows users to submit corrected sentiment or aspect labels.
-
-- **User Training Statistics**  
-  `GET /user-training-stats`  
-  Fetches contribution statistics for a specific user.
-
-- **Submit Feedback**  
-  `POST /feedback`  
-  Collects usability and accuracy feedback from users.
-
----
-
-### Admin Management
-
-- **Pending Corrections**  
-  `GET /admin/pending-corrections`  
-  Retrieves all user-submitted corrections awaiting approval.
-
-- **Approve Correction**  
-  `POST /admin/corrections/{id}/approve`  
-  Moves validated corrections into the training dataset.
-
-- **User Management**  
-  `GET /admin/users`  
-  Lists registered users with roles and activity data.
-
----
-
-### System Health & Analytics
-
-- **System Health**  
-  `GET /admin/system-health`  
-  Reports API and database latency.
-
-- **Infrastructure Metrics**  
-  `GET /admin/infrastructure-metrics`  
-  Returns CPU, memory, and disk usage.
-
-- **API Traffic Analytics**  
-  `GET /admin/api-traffic`  
-  Tracks request volume and average response time.
-
----
-
 ### License
 
-Distributed under the MIT License.
+MIT License
+
+© 2025 Bhargav Sawant
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
