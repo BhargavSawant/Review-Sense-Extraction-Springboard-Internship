@@ -12,7 +12,6 @@ Sentiment+ is a robust full-stack application designed to transform unstructured
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
-- [API Documentation](#api-documentation)
 - [License](#license)
 
 ---
@@ -123,10 +122,10 @@ The application follows a decoupled, scalable architecture:
    ```
    
 3. Configure the .env.local file with:
-   MONGODB_URI
-   NEXTAUTH_SECRET
-   GOOGLE_CLIENT_ID
-   GOOGLE_CLIENT_SECRET
+   - MONGODB_URI
+   - NEXTAUTH_SECRET
+   - GOOGLE_CLIENT_ID
+   - GOOGLE_CLIENT_SECRET
 
 ---
 
