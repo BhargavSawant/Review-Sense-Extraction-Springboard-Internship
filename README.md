@@ -62,6 +62,74 @@ Sentiment+ is a robust full-stack application designed to transform unstructured
 
 ---
 
+## Prerequisites
+
+- **Node.js**: Version 18 or higher  
+- **Python**: Version 3.8 or higher  
+- **MongoDB**: Local instance or MongoDB Atlas  
+- **Environment Variables**: `.env` files for backend and frontend
+
+---
+
+## Installation
+
+### Backend Setup
+
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   
+   source venv/bin/activate      # Linux / macOS
+   venv\Scripts\activate         # Windows
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+   
+2. Install dependencies:
+   ```bash
+   npm install next next-auth lucide-react chart.js react-chartjs-2 recharts
+   ```
+   
+3. Configure the .env.local file with:
+   MONGODB_URI
+   NEXTAUTH_SECRET
+   GOOGLE_CLIENT_ID
+   GOOGLE_CLIENT_SECRET
+
+---
+
+### Usage
+1. Start the Backend API
+   ```bash
+   uvicorn sentiment_api:app --reload --port 8000
+   ```
+   
+2. Start the Frontend Application
+   ```bash
+   npm run dev
+   ```
+   
+3. Access the Application
+   ```bash
+   http://localhost:3000
+   ```
+
+---
+
 ## Architecture
 
 The application follows a decoupled, scalable architecture:
@@ -145,74 +213,6 @@ The Sentiment+ backend exposes RESTful endpoints via FastAPI.
 - **API Traffic Analytics**  
   `GET /admin/api-traffic`  
   Tracks request volume and average response time.
-
----
-
-## Prerequisites
-
-- **Node.js**: Version 18 or higher  
-- **Python**: Version 3.8 or higher  
-- **MongoDB**: Local instance or MongoDB Atlas  
-- **Environment Variables**: `.env` files for backend and frontend
-
----
-
-## Installation
-
-### Backend Setup
-
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   
-   source venv/bin/activate      # Linux / macOS
-   venv\Scripts\activate         # Windows
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-   
-2. Install dependencies:
-   ```bash
-   npm install next next-auth lucide-react chart.js react-chartjs-2 recharts
-   ```
-   
-3. Configure the .env.local file with:
-   MONGODB_URI
-   NEXTAUTH_SECRET
-   GOOGLE_CLIENT_ID
-   GOOGLE_CLIENT_SECRET
-
----
-
-### Usage
-1. Start the Backend API
-   ```bash
-   uvicorn sentiment_api:app --reload --port 8000
-   ```
-   
-2. Start the Frontend Application
-   ```bash
-   npm run dev
-   ```
-   
-3. Access the Application
-   ```bash
-   http://localhost:3000
-   ```
 
 ---
 
