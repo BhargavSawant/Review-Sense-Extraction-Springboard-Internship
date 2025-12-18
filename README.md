@@ -1,6 +1,8 @@
 # Sentiment+
 
-Sentiment+ is a robust full-stack application designed to transform unstructured raw data into structured, actionable insights using Aspect-Based Sentiment Analysis (ABSA) and Active Learning. By leveraging state-of-the-art NLP models like RoBERTa and KeyBERT, the platform provides deep granular analysis across various domains such as product reviews, food, and travel.
+Sentiment+ is a robust full-stack application designed to transform unstructured raw data into structured, actionable insights using Aspect-Based Sentiment Analysis (ABSA) and Active Learning. By leveraging state-of-the-art NLP models like RoBERTa and KeyBERT, the platform provides deep, granular analysis across domains such as product reviews, food, and travel.
+
+---
 
 ## Table of Contents
 
@@ -13,93 +15,177 @@ Sentiment+ is a robust full-stack application designed to transform unstructured
 - [Usage](#usage)
 - [License](#license)
 
+---
+
 ## Features
 
-- **Sentiment Analysis:** Real-time sentiment classification using fine-tuned models.
-- **Aspect Detection:** Automated extraction of 20+ domain-agnostic aspects using KeyBERT with Maximal Marginal Relevance (MMR) for context awareness.
-- **Emotion Distribution:** Multi-dimensional emotion tracking (Joy, Trust, Anger, Anticipation, Sadness) derived from aspect-level sentiments.
-- **Active Learning Feedback Loop:** A complete system where users can correct model predictions, which are then queued for admin review and model retraining.
-- **Bulk Analysis:** Support for CSV/Excel uploads to process hundreds of reviews simultaneously with aggregated reporting.
-- **Admin Verification:** A specialized interface for administrators to verify, refine, or discard user-suggested corrections before model integration.
-- **System Monitoring:** Comprehensive health metrics including CPU/Memory usage, API traffic tracking, and database latency.
+- **Sentiment Analysis**  
+  Real-time sentiment classification using fine-tuned transformer models.
+
+- **Aspect Detection**  
+  Automated extraction of 20+ domain-agnostic aspects using KeyBERT with Maximal Marginal Relevance (MMR) for contextual relevance.
+
+- **Emotion Distribution**  
+  Multi-dimensional emotion tracking (Joy, Trust, Anger, Anticipation, Sadness) derived from aspect-level sentiment outputs.
+
+- **Active Learning Feedback Loop**  
+  Users can correct predictions, which are queued for administrator verification and future model retraining.
+
+- **Bulk Review Analysis**  
+  Supports CSV and Excel uploads for large-scale sentiment processing with aggregated insights.
+
+- **Admin Verification Workflow**  
+  Dedicated admin interface to approve, reject, or refine user-submitted corrections.
+
+- **System Monitoring & Analytics**  
+  Tracks API health, CPU and memory usage, database latency, and request traffic.
+
+---
 
 ## Technologies Used
 
 ### Backend
-- **Python (FastAPI):** High-performance API framework.
-- **Transformers (Hugging Face):** Implementation of RoBERTa for sentiment analysis.
-- **KeyBERT:** BERTopic-based keyword extraction for aspect detection.
-- **MongoDB:** Document-oriented database for storing reviews, corrections, and traffic analytics.
+
+- **Python (FastAPI)** – High-performance REST API framework  
+- **Hugging Face Transformers** – RoBERTa-based sentiment models  
+- **KeyBERT** – Keyword and aspect extraction  
+- **MongoDB** – Storage for reviews, feedback, analytics, and user data  
+- **psutil** – Infrastructure monitoring
 
 ### Frontend
-- **Next.js (App Router):** React framework for the user interface.
-- **NextAuth.js:** Secure authentication supporting Credentials and Google Providers.
-- **Tailwind CSS:** Utility-first styling for a responsive and modern dashboard.
-- **Lucide React:** Iconography for navigation and data visualization.
-- **Chart.js & Recharts:** Data visualization for sentiment trends and system metrics.
+
+- **Next.js (App Router)** – Modern React framework  
+- **NextAuth.js** – Authentication with Credentials and Google Provider  
+- **Tailwind CSS** – Utility-first styling system  
+- **Lucide React** – Icons  
+- **Chart.js & Recharts** – Data visualization
+
+---
 
 ## Architecture
 
-The system utilizes a decoupled architecture where the Next.js frontend handles authentication (via NextAuth) and UI rendering, while the FastAPI backend manages the heavy lifting for NLP tasks.
+The application follows a decoupled, scalable architecture:
 
-- **NextAuth Integration:** The frontend handles authentication via Google or Credentials providers, storing user sessions and roles in the `sentiment_db`.
-- **Database Utility:** A centralized MongoClient utility manages connections for both the Next.js frontend and the FastAPI backend.
+- **Frontend (Next.js)**  
+  Handles UI rendering, authentication, dashboards, and active learning workflows.
+
+- **Backend (FastAPI)**  
+  Performs sentiment analysis, aspect extraction, feedback handling, and analytics.
+
+- **Authentication Layer**  
+  NextAuth manages user sessions and role-based access control.
+
+- **Database Layer**  
+  A shared MongoDB instance stores reviews, corrections, users, and metrics.
+
+---
 
 ## API Documentation
 
-The Sentiment+ backend is powered by FastAPI. Below are the primary endpoints available.
+The Sentiment+ backend exposes RESTful endpoints via FastAPI.
 
 ### Core Analysis Endpoints
-- `POST /analyze-single`: Performs full Aspect-Based Sentiment Analysis (ABSA) on a single text string. Extracts up to 20 aspects using KeyBERT and assigns sentiment to each.
-- `POST /upload-reviews`: Accepts CSV or Excel files for large-scale analysis. Returns aggregated insights and individual analysis for the first 50 reviews.
-- `POST /predict`: **(Legacy)** A simplified endpoint for basic sentiment classification without aspect extraction.
 
-### Active Learning and Feedback
-- `POST /corrections`: Allows users to suggest corrections for misclassified sentiments or aspects.
-- `GET /user-training-stats`: Retrieves statistics on a specific user's contributions to the training pool.
-- `POST /feedback`: Collects user ratings on system performance across categories like dashboard usability and analysis accuracy.
+- **Analyze Single Review**  
+  `POST /analyze-single`  
+  Performs full ABSA on a single review and extracts aspect-level sentiments.
+
+- **Bulk Upload Reviews**  
+  `POST /upload-reviews`  
+  Accepts CSV or Excel files for large-scale sentiment analysis.
+
+- **Legacy Prediction**  
+  `POST /predict`  
+  Performs basic sentiment classification without aspect extraction.
+
+---
+
+### Active Learning & Feedback
+
+- **Submit Correction**  
+  `POST /corrections`  
+  Allows users to submit corrected sentiment or aspect labels.
+
+- **User Training Statistics**  
+  `GET /user-training-stats`  
+  Fetches contribution statistics for a specific user.
+
+- **Submit Feedback**  
+  `POST /feedback`  
+  Collects usability and accuracy feedback from users.
+
+---
 
 ### Admin Management
-- `GET /admin/pending-corrections`: Lists all user-submitted corrections awaiting administrator approval.
-- `POST /admin/corrections/{id}/approve`: Validates a user correction and moves it into the model training queue.
-- `GET /admin/users`: Provides a searchable list of all registered users, their roles, and activity levels.
 
-### System Health and Analytics
-- `GET /admin/system-health`: Returns real-time latency for the API and MongoDB, along with overall status.
-- `GET /admin/infrastructure-metrics`: Monitors server-level CPU, Memory, and Disk usage using psutil.
-- `GET /admin/api-traffic`: Tracks request counts and average response times over a 24-hour period.
+- **Pending Corrections**  
+  `GET /admin/pending-corrections`  
+  Retrieves all user-submitted corrections awaiting approval.
+
+- **Approve Correction**  
+  `POST /admin/corrections/{id}/approve`  
+  Moves validated corrections into the training dataset.
+
+- **User Management**  
+  `GET /admin/users`  
+  Lists registered users with roles and activity data.
+
+---
+
+### System Health & Analytics
+
+- **System Health**  
+  `GET /admin/system-health`  
+  Reports API and database latency.
+
+- **Infrastructure Metrics**  
+  `GET /admin/infrastructure-metrics`  
+  Returns CPU, memory, and disk usage.
+
+- **API Traffic Analytics**  
+  `GET /admin/api-traffic`  
+  Tracks request volume and average response time.
+
+---
 
 ## Prerequisites
 
-- **Node.js:** Version 18.0 or higher.
-- **Python:** Version 3.8 or higher.
-- **MongoDB:** A running instance (local or Atlas).
-- **Environment Variables:** You must create a `.env` file in the root of both the `backend` and `frontend` directories.
+- **Node.js**: Version 18 or higher  
+- **Python**: Version 3.8 or higher  
+- **MongoDB**: Local instance or MongoDB Atlas  
+- **Environment Variables**: `.env` files for backend and frontend
+
+---
 
 ## Installation
 
 ### Backend Setup
+
+1. Navigate to the backend directory:
    ```bash
    cd backend
    ```
-   # Create and activate a virtual environment
-   ```
-   python -m venv venv
-   ```
-   # Install dependencies:
-   ```
-   # Activate (Linux/macOS)
-   source venv/bin/activate 
 
-   # Activate (Windows)
-   venv\Scripts\activate
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
    
+   source venv/bin/activate      # Linux / macOS
+   venv\Scripts\activate         # Windows
+   ```
+3. Install dependencies:
+   ```bash
    pip install -r requirements.txt
    ```
+
+---
+
 ### Frontend Setup
+
+1. Navigate to the frontend directory:
    ```bash
    cd frontend
    ```
-
-
-Configure the .env.local file with your MONGODB_URI, NEXTAUTH_SECRET, and GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.
+3. Install dependencies:
+4. Configure the .env.local file with:
+   
