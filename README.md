@@ -83,15 +83,16 @@ The Sentiment+ backend is powered by FastAPI. Below are the primary endpoints av
 1. Navigate to the backend directory:
    ```bash
    cd backend
+   
    # Create
-python -m venv venv
+   python -m venv venv
 
-# Activate (Linux/macOS)
-source venv/bin/activate 
+   # Activate (Linux/macOS)
+   source venv/bin/activate 
 
-# Activate (Windows)
-venv\Scripts\activate
+   # Activate (Windows)
+   venv\Scripts\activate
 
-pip install -r requirements.txt
+   pip install -r requirements.txt
 
 cd frontend
