@@ -78,7 +78,7 @@ async def track_api_traffic(request: Request, call_next):
     return response
 
 # MongoDB connection
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://bhargavswntb_db_user:IN1XKHhELmPZYZeG@cluster0.o2juj0x.mongodb.net/?appName=Cluster0")
+MONGODB_URI = os.getenv("MONGODB_URI", "YOUR MONGODB URL")
 client = MongoClient(MONGODB_URI)
 db = client["sentiment_db"]
 reviews_collection = db["reviews"]
