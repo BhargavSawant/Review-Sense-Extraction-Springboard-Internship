@@ -79,20 +79,27 @@ The Sentiment+ backend is powered by FastAPI. Below are the primary endpoints av
 ## Installation
 
 ### Backend Setup
-
-1. Navigate to the backend directory:
    ```bash
    cd backend
-   
-   # Create
+   ```
+   # Create and activate a virtual environment
+   ```
    python -m venv venv
-
+   ```
+   # Install dependencies:
+   ```
    # Activate (Linux/macOS)
    source venv/bin/activate 
 
    # Activate (Windows)
    venv\Scripts\activate
-
+   
    pip install -r requirements.txt
+   ```
+### Frontend Setup
+   ```bash
+   cd frontend
+   ```
 
-cd frontend
+
+Configure the .env.local file with your MONGODB_URI, NEXTAUTH_SECRET, and GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.
