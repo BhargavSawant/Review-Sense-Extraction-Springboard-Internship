@@ -49,6 +49,8 @@ backend/__pycache__/
 
 # Model (do not commit)
 backend/my_finetuned_sentiment_model/
+backend/roberta_sentiment_final/
+backend/eval_data_2k.csv
 
 # Env files
 .env
